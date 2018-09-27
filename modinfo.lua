@@ -1,4 +1,4 @@
-name = "Fast Travel(Debug)"
+name = "Fast Travel"
 version = "2.00"
 description = "Build a fast travel network and travel instantly from sign post to sign post."
 author = "SoraYuki"
