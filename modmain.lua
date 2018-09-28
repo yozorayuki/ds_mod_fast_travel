@@ -1,17 +1,16 @@
-local Travel_Cost = GetModConfigData("Travel_Cost")
+GLOBAL.TRAVEL_COST = GetModConfigData("Travel_Cost")
 
 local function TravelableInit(inst)
 	inst:AddComponent("signable")
 	inst:AddComponent("travelable")
 	inst:AddComponent("talker")
-
-	inst.components.travelable.dist_cost = Travel_Cost
 end
 AddPrefabPostInit("homesign", TravelableInit)
 
------ Actions -----
+-------------------- Actions --------------------
 local Action = GLOBAL.Action
 local ActionHandler = GLOBAL.ActionHandler
+local SpawnPrefab = GLOBAL.SpawnPrefab
 
 local EDIT = Action(10, false)
 EDIT.str = "Edit"
@@ -37,7 +36,7 @@ SIGN_REPAIR.fn = function(act)
 		return true
 	end
 	if tar and tar:HasTag("burnt") then
-		local prod = GLOBAL.SpawnPrefab(tar.prefab)
+		local prod = SpawnPrefab(tar.prefab)
 		if prod then
 			local pt = Point(tar.Transform:GetWorldPosition())
 			local text = tar.components.signable and tar.components.signable:GetText()

@@ -33,7 +33,7 @@ function Signable:CollectSceneActions(doer, actions, right)
 end
 
 function Signable:OnBuilt(builder)
-	if self.inst and self.inst.components.signable and builder then
+	if self.inst.components.signable and builder then
 		self.inst.components.signable:OnSign(builder)
 	end
 end
@@ -64,7 +64,9 @@ function Signable:SetText(text)
 end
 
 function Signable:OnSign(signer)
-	TheFrontEnd:PushScreen(EditScreen(self.inst, signer))
+	if signer then
+		TheFrontEnd:PushScreen(EditScreen(self.inst, signer))
+	end
 end
 
 return Signable

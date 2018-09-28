@@ -20,11 +20,11 @@ configuration_options = {
         name = "Travel_Cost",
         label = "Travel Cost",
         options = {
-            {description = "Very low", data = 96},
-            {description = "Low", data = 64},
-            {description = "Normal", data = 32},
-            {description = "High", data = 21.3},
-            {description = "Very High", data = 16}
+            {description = "X0.3", data = 106.7},
+            {description = "X0.5", data = 64},
+            {description = "X1.0", data = 32},
+            {description = "X1.5", data = 21.3},
+            {description = "X2.0", data = 16}
         },
         default = 32
     }

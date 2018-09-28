@@ -126,11 +126,11 @@ function EditScreen:OnWrite()
 			self.attach.components.signable:SetText(text)
 		end
 	end
-	TheFrontEnd:PopScreen(self)
 	if self.attach.components.travelable then
+		TheFrontEnd:PopScreen(self)
 		self.attach.components.travelable:OnSelect(self.signer)
 	else
-		SetPause(false)
+		self:OnCancel()
 	end
 end
 
@@ -141,8 +141,7 @@ function EditScreen:OnRemove()
 		self.attach.SoundEmitter:PlaySound("dontstarve/common/destroy_wood")
 		self.attach:Remove()
 	end
-	TheFrontEnd:PopScreen(self)
-	SetPause(false)
+	self:OnCancel()
 end
 
 function EditScreen:OnCancel()

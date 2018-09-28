@@ -1,6 +1,5 @@
 local TravelScreen = require "screens/travelscreen"
 
-local default_dist_cost = 32
 local min_hunger_cost = 5
 local max_hunger_cost = 75
 local sanity_cost_ratio = 25 / 75
@@ -9,7 +8,6 @@ local Travelable =
 	Class(
 	function(self, inst)
 		self.inst = inst
-		self.dist_cost = default_dist_cost
 	end
 )
 
@@ -44,7 +42,7 @@ function Travelable:MakeInfos()
 		info.name = v.components.signable and v.components.signable:GetText()
 		info.x, info.y, info.z = v.Transform:GetWorldPosition()
 		local dist = math.sqrt((xi - info.x) ^ 2 + (zi - info.z) ^ 2)
-		info.cost_hunger = math.ceil(math.min(min_hunger_cost + dist / self.dist_cost, max_hunger_cost))
+		info.cost_hunger = math.ceil(math.min(min_hunger_cost + dist / TRAVEL_COST, max_hunger_cost))
 		info.cost_sanity = math.ceil(info.cost_hunger * sanity_cost_ratio)
 		if GetSeasonManager():GetSeasonString() == "winter" then
 			info.cost_sanity = math.ceil(info.cost_sanity * 1.25)
