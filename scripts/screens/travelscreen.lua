@@ -81,19 +81,16 @@ local TravelScreen =
         self.menu:SetHRegPoint(ANCHOR_MIDDLE)
 
         self.destwidgets = {}
-        self:ReloadDists()
+        self:LoadDists()
 
-        self.default_focus = self.cancelbutton
+        self.default_focus = self.editbutton
         self:Show()
+        self.isopen = true
     end
 )
 
-function TravelScreen:ReloadDists()
+function TravelScreen:LoadDists()
     self.dest_infos = self.attach.components.travelable and self.attach.components.travelable:MakeInfos()
-    if not self.dest_infos then
-        return
-    end
-
     self.dest_offset = 0
     self:Scroll(0)
 end
@@ -146,12 +143,6 @@ function TravelScreen:RefreshDests()
         dest.name:SetHAlign(ANCHOR_LEFT)
         dest.name:SetPosition(0, 10, 0)
         dest.name:SetRegionSize(300, 40)
-        if info.name == "" then
-            dest.name:SetString("Unknow")
-            dest.name:SetColour(1, 1, 0, 0.6)
-        else
-            dest.name:SetString(info.name)
-        end
 
         local cost_py = -20
         local cost_font = UIFONT
@@ -163,9 +154,6 @@ function TravelScreen:RefreshDests()
         dest.cost_hunger:SetPosition(-100, cost_py, 0)
         dest.cost_hunger:SetRegionSize(100, 30)
         dest.cost_hunger:SetColour(1, 1, 1, 0.8)
-        if info.cost_hunger then
-            dest.cost_hunger:SetString("hunger: " .. info.cost_hunger)
-        end
 
         dest.cost_sanity = dest:AddChild(Text(cost_font, cost_fontsize))
         dest.cost_sanity:SetVAlign(ANCHOR_MIDDLE)
@@ -173,9 +161,6 @@ function TravelScreen:RefreshDests()
         dest.cost_sanity:SetPosition(-30, cost_py, 0)
         dest.cost_sanity:SetRegionSize(100, 30)
         dest.cost_sanity:SetColour(1, 1, 1, 0.8)
-        if info.cost_sanity then
-            dest.cost_sanity:SetString("sanity: " .. info.cost_sanity)
-        end
 
         dest.status = dest:AddChild(Text(cost_font, cost_fontsize))
         dest.status:SetVAlign(ANCHOR_MIDDLE)
@@ -183,28 +168,40 @@ function TravelScreen:RefreshDests()
         dest.status:SetPosition(150, cost_py, 0)
         dest.status:SetRegionSize(100, 30)
 
-        if info.inst == self.attach then
-            dest.name:SetColour(0, 1, 0, 0.4)
-            dest.cost_hunger:SetString("current")
-            dest.cost_hunger:SetColour(0, 1, 0, 0.4)
-            dest.cost_sanity:Hide()
-            dest.status:Hide()
-            dest:Disable()
+        if info.name == "" then
+            dest.name:SetString("Unknow")
+            dest.name:SetColour(1, 1, 0, 0.6)
         else
+            dest.name:SetString(info.name)
+        end
+
+        if info.inst ~= self.attach then
+            if info.cost_hunger then
+                dest.cost_hunger:SetString("hunger: " .. info.cost_hunger)
+            end
+            if info.cost_sanity then
+                dest.cost_sanity:SetString("sanity: " .. info.cost_sanity)
+            end
             if info.status then
                 dest.status:SetString(info.status)
                 dest.status:SetColour(1, 1, 0, 0.6)
                 dest.cost_hunger:SetColour(1, 1, 0, 0.6)
                 dest.cost_sanity:SetColour(1, 1, 0, 0.6)
             end
+
+            dest.reachable = true
             if self.traveller.components.hunger and self.traveller.components.hunger.current < info.cost_hunger then
                 dest.cost_hunger:SetColour(1, 0, 0, 0.4)
-                dest:Disable()
+                dest.reachable = false
             end
             if self.traveller.components.sanity and self.traveller.components.sanity.current < info.cost_sanity then
                 dest.cost_sanity:SetColour(1, 0, 0, 0.4)
-                dest:Disable()
+                dest.reachable = false
             end
+        else
+            dest.name:SetColour(0, 1, 0, 0.4)
+            dest.cost_hunger:SetString("current")
+            dest.cost_hunger:SetColour(0, 1, 0, 0.4)
         end
 
         local spacing = 80
@@ -221,18 +218,16 @@ function TravelScreen:RefreshDests()
             dest.bg:GetAnimState():PlayAnimation("anim")
         end
 
-        if dest:IsEnabled() then
+        if dest.reachable then
             dest.OnControl = function(_, control, down)
                 if Widget.OnControl(dest, control, down) then
                     return true
                 end
-                if control == CONTROL_ACCEPT and not down then
+                if not down and control == CONTROL_ACCEPT then
                     self:DoTravel(dest.idx)
                     return true
                 end
             end
-        else
-            dest:Enable()
         end
 
         table.insert(self.destwidgets, dest)
@@ -250,7 +245,7 @@ function TravelScreen:RefreshDests()
         self.destspanel.items[k]:SetFocusChangeDir(
             MOVE_LEFT,
             function()
-                if not self:OnFirstPage() then
+                if not self:IsFirstPage() then
                     self:Scroll(-display_rows)
                 end
                 return self.destspanel.items[k]
@@ -260,7 +255,7 @@ function TravelScreen:RefreshDests()
         self.destspanel.items[k]:SetFocusChangeDir(
             MOVE_RIGHT,
             function()
-                if not self:OnLastPage() then
+                if not self:IsLastPage() then
                     self:Scroll(display_rows)
                 end
                 if k > #self.destspanel.items then
@@ -272,49 +267,67 @@ function TravelScreen:RefreshDests()
         )
     end
 
-    if self.destspanel.items == nil or #self.destspanel.items == 0 then
-        return
+    if self.destspanel.items and #self.destspanel.items > 0 then
+        local last_list_item = self.destspanel.items[#self.destspanel.items]
+        last_list_item:SetFocusChangeDir(MOVE_DOWN, self.editbutton)
+        self.editbutton:SetFocusChangeDir(MOVE_UP, last_list_item)
+        self.cancelbutton:SetFocusChangeDir(MOVE_UP, last_list_item)
+    else
+        self.editbutton:SetFocusChangeDir(MOVE_UP, nil)
+        self.cancelbutton:SetFocusChangeDir(MOVE_UP, nil)
     end
-
-    self.destspanel.items[#self.destspanel.items]:SetFocusChangeDir(MOVE_DOWN, self.editbutton)
-    self.editbutton:SetFocusChangeDir(MOVE_UP, self.destspanel.items[#self.destspanel.items])
-    self.cancelbutton:SetFocusChangeDir(MOVE_UP, self.destspanel.items[#self.destspanel.items])
 end
 
-function TravelScreen:OnFirstPage()
+function TravelScreen:IsFirstPage()
     return self.dest_offset == 0
 end
 
-function TravelScreen:OnLastPage()
+function TravelScreen:IsLastPage()
     return self.dest_offset + display_rows >= #self.dest_infos
 end
 
 function TravelScreen:DoTravel(idx)
+    if not self.isopen then
+        return
+    end
+
     local info = self.dest_infos[idx]
 
     if self.attach.components.travelable then
         self.attach.components.travelable:DoTravel(self.traveller, info)
+    else
+        print("is not travelable\n", debug.traceback())
     end
     self:OnCancel()
 end
 
-function TravelScreen:OnCancel()
-    TheFrontEnd:PopScreen(self)
-    SetPause(false)
+function TravelScreen:OnEdit()
+    if not self.isopen then
+        return
+    end
+
+    if self.attach.components.signable then
+        self:OnCancel()
+        self.attach.components.signable:OnSign(self.traveller)
+    else
+        print("is not signable\n", debug.traceback())
+    end
 end
 
-function TravelScreen:OnEdit()
-    if self.attach.components.signable then
-        TheFrontEnd:PopScreen(self)
-        self.attach.components.signable:OnSign(self.traveller)
+function TravelScreen:OnCancel()
+    if not self.isopen then
+        return
     end
+
+    TheFrontEnd:PopScreen(self)
+    SetPause(false)
 end
 
 function TravelScreen:OnControl(control, down)
     if self._base.OnControl(self, control, down) then
         return true
     end
-    if not down and (control == CONTROL_PAUSE or control == CONTROL_CANCEL) then
+    if not down and control == CONTROL_CANCEL then
         self:OnCancel()
         return true
     end

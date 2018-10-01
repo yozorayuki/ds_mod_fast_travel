@@ -41,15 +41,15 @@ local EditScreen =
 		self.sign_bg:SetPosition(0, sign_offset, 0)
 		self.sign_bg:ScaleToSize(edit_width + edit_bg_padding, edit_height)
 
-		self.sign = self.root:AddChild(TextEdit(BODYTEXTFONT, fontsize, self.text or ""))
-		self.sign:SetPosition(0, sign_offset, 0)
-		self.sign:SetRegionSize(edit_width, edit_height)
-		self.sign:SetHAlign(ANCHOR_LEFT)
-		self.sign:SetFocusedImage(self.sign_bg, UI_ATLAS, "textbox_long_over.tex", "textbox_long.tex")
-		self.sign:SetTextLengthLimit(30)
-		self.sign:SetCharacterFilter(VALID_CHARS)
-		self.sign:SetAllowClipboardPaste(true)
-		self.sign.OnTextInput = function(_, text)
+		self.signedit = self.root:AddChild(TextEdit(BODYTEXTFONT, fontsize, self.text or ""))
+		self.signedit:SetPosition(0, sign_offset, 0)
+		self.signedit:SetRegionSize(edit_width, edit_height)
+		self.signedit:SetHAlign(ANCHOR_LEFT)
+		self.signedit:SetFocusedImage(self.sign_bg, UI_ATLAS, "textbox_long_over.tex", "textbox_long.tex")
+		self.signedit:SetTextLengthLimit(30)
+		self.signedit:SetCharacterFilter(VALID_CHARS)
+		self.signedit:SetAllowClipboardPaste(true)
+		self.signedit.OnTextInput = function(_, text)
 			local origin = _:GetLineEditString()
 			local re = TextEdit.OnTextInput(_, text)
 			if origin ~= _:GetLineEditString() then
@@ -57,18 +57,40 @@ local EditScreen =
 			end
 			return re
 		end
-		self.sign.OnRawKey = function(_, key, down)
-			if not down and key == KEY_ENTER then
-				self:OnWrite()
-				return true
+		self.signedit.OnControl = function(_, control, down)
+			-- print("ctl", control, down)
+			return TextEdit.OnControl(_, control, down)
+		end
+		self.signedit.OnRawKey = function(_, key, down)
+			-- print("key", key, down)
+			if down then
+				_.enter_focused = false
+			else
+				if key == KEY_BACKSPACE then
+					self.hint:Hide()
+				elseif key == KEY_ENTER and _.enter_focused then
+					self:OnWrite()
+				end
 			end
-			if not down and key == KEY_BACKSPACE then
-				self.hint:Hide()
+			if key == KEY_W or key == KEY_S or key == KEY_A or key == KEY_D then
+				_.dofocusmove = false
+			else
+				_.dofocusmove = true
 			end
 			return TextEdit.OnRawKey(_, key, down)
 		end
+		self.signedit.OnTextEntered = function(text)
+			self.signedit.enter_focused = true
+		end
+		self.signedit.OnFocusMove = function(_, dir, down)
+			-- print("fcs", dir, down)
+			if not _.dofocusmove or dir == MOVE_LEFT or dir == MOVE_RIGHT then
+				return true
+			end
+			return Widget.OnFocusMove(_, dir, down)
+		end
 
-		self.hint = self.root:AddChild(Text(BODYTEXTFONT, hintsize, "sign already exists"))
+		self.hint = self.root:AddChild(Text(BODYTEXTFONT, hintsize, "signedit already exists"))
 		self.hint:SetPosition(0, -5, 0)
 		self.hint:SetRegionSize(edit_width, edit_height)
 		self.hint:SetHAlign(ANCHOR_LEFT)
@@ -101,65 +123,92 @@ local EditScreen =
 		)
 		self.menu:SetHRegPoint(ANCHOR_MIDDLE)
 
-		self.sign:SetFocusChangeDir(MOVE_DOWN, self.writebutton)
-		self.writebutton:SetFocusChangeDir(MOVE_UP, self.sign)
-		self.destroybutton:SetFocusChangeDir(MOVE_UP, self.sign)
-		self.cancelbutton:SetFocusChangeDir(MOVE_UP, self.sign)
+		self.signedit:SetFocusChangeDir(MOVE_DOWN, self.writebutton)
+		self.writebutton:SetFocusChangeDir(MOVE_UP, self.signedit)
+		self.destroybutton:SetFocusChangeDir(MOVE_UP, self.signedit)
+		self.cancelbutton:SetFocusChangeDir(MOVE_UP, self.signedit)
 
-		self.default_focus = self.cancelbutton
+		self.default_focus = self.signedit
 		self:Show()
+		self.signedit:SetEditing(true)
+		self.isopen = true
 	end
 )
 
 function EditScreen:OnWrite()
-	local text = self.sign:GetLineEditString()
-	if text ~= self.text then
-		if text and text ~= "" then
-			for k, v in pairs(Signs) do
-				if v.components.signable and v.components.signable:GetText() == text and v ~= self.attach then
-					self.hint:Show()
-					return
-				end
+	if not self.isopen then
+		return
+	end
+
+	local text = self.signedit:GetLineEditString()
+	if text and text ~= "" then
+		for k, v in pairs(Signs) do
+			if v.components.signable and v.components.signable:GetText() == text and v ~= self.attach then
+				self.hint:Show()
+				return
 			end
 		end
-		if self.attach.components.signable then
-			self.attach.components.signable:SetText(text)
-		end
 	end
+	if self.attach.components.signable then
+		self.attach.components.signable:SetText(text)
+	end
+	self:OnCancel()
 	if self.attach.components.travelable then
-		TheFrontEnd:PopScreen(self)
 		self.attach.components.travelable:OnSelect(self.signer)
 	else
-		self:OnCancel()
+		print("is not travelable\n", debug.traceback())
 	end
 end
 
 function EditScreen:OnRemove()
+	if not self.isopen then
+		return
+	end
+
 	if self.attach then
 		self.attach.components.lootdropper:DropLoot()
 		SpawnPrefab("collapse_big").Transform:SetPosition(self.attach.Transform:GetWorldPosition())
 		self.attach.SoundEmitter:PlaySound("dontstarve/common/destroy_wood")
 		self.attach:Remove()
+	else
+		print("self.attach is nil\n", debug.traceback())
 	end
 	self:OnCancel()
 end
 
 function EditScreen:OnCancel()
+	if not self.isopen then
+		return
+	end
+
 	TheFrontEnd:PopScreen(self)
 	SetPause(false)
+end
+
+function EditScreen:OnRawKey(key, down)
+	if self._base.OnRawKey(self, key, down) then
+		return true
+	end
+	if down then
+		self.keyin = true
+	else
+		if key == KEY_ENTER and self.keyin then
+			self:OnWrite()
+			return true
+		end
+		self.keyin = false
+	end
 end
 
 function EditScreen:OnControl(control, down)
 	if self._base.OnControl(self, control, down) then
 		return true
 	end
-	if not down and (control == CONTROL_PAUSE or control == CONTROL_CANCEL) then
-		self:OnCancel()
-		return true
-	end
-	if not down and control == CONTROL_ACCEPT then
-		self:OnWrite()
-		return true
+	if not down then
+		if control == CONTROL_CANCEL then
+			self:OnCancel()
+			return true
+		end
 	end
 end
 
