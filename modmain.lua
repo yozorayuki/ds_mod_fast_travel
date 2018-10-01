@@ -61,9 +61,14 @@ DESTINATION.fn = function(act)
 	local tar = act.target
 	local traveller = act.doer
 	if tar and tar.components.travelable and traveller then
-		tar.components.travelable:OnSelect(traveller)
+		tar:DoTaskInTime(
+			.2,
+			function()
+				tar.components.travelable:OnSelect(traveller)
+			end
+		)
 		return true
 	end
 end
 AddAction(DESTINATION)
-AddStategraphActionHandler("wilson", ActionHandler(DESTINATION, nil))
+AddStategraphActionHandler("wilson", ActionHandler(DESTINATION, "give"))
