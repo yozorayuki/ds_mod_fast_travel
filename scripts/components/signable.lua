@@ -8,7 +8,7 @@ local Signable =
 		self.inst = inst
 		self.text = nil
 
-		if self.inst and self.inst.components.inspectable then
+		if self.inst.components.inspectable then
 			self.inst.components.inspectable:SetDescription(
 				function(inst, viewr)
 					if self.text and #self.text > 0 then
@@ -33,8 +33,15 @@ function Signable:CollectSceneActions(doer, actions, right)
 end
 
 function Signable:OnBuilt(builder)
-	if self.inst.components.signable and builder then
-		self.inst.components.signable:OnSign(builder)
+	if builder then
+		self.inst:DoTaskInTime(
+			.1,
+			function()
+				self:OnSign(builder)
+			end
+		)
+	else
+		print("builder is nil\n", debug.traceback())
 	end
 end
 
@@ -66,7 +73,15 @@ end
 function Signable:OnSign(signer)
 	if signer then
 		TheFrontEnd:PushScreen(EditScreen(self.inst, signer))
+	else
+		print("signer is nil\n", debug.traceback())
 	end
+end
+
+function Signable:Reload()
+	package.loaded["screens/editscreen"] = nil
+	EditScreen = require "screens/editscreen"
+	print("EditScreen Reloaded")
 end
 
 return Signable

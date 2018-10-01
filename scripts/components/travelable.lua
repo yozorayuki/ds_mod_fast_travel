@@ -19,18 +19,28 @@ end
 
 function Travelable:OnSelect(traveller)
 	local comment = self.inst.components.talker
+	if not traveller then
+		if comment then
+			comment:Say("Is there anyone touched me???")
+		end
+		return
+	end
 	local talk = traveller.components.talker
 
-	if self:IsNearDanger(traveller) then
+	if traveller.components.health and traveller.components.health:IsDead() then
+		if comment then
+			comment:Say("It's too late. We can't help you.")
+		end
+	elseif self:IsNearDanger(traveller) then
 		if talk then
 			talk:Say("It's not safe to travel.")
 		elseif comment then
 			comment:Say("It's not safe to travel.")
 		end
 		return
+	else
+		TheFrontEnd:PushScreen(TravelScreen(self.inst, traveller))
 	end
-
-	TheFrontEnd:PushScreen(TravelScreen(self.inst, traveller))
 end
 
 function Travelable:MakeInfos()
@@ -83,13 +93,13 @@ function Travelable:DoTravel(traveller, info)
 	local comment = self.inst.components.talker
 	if not traveller then
 		if comment then
-			comment:Say("I can't find where you are.")
+			comment:Say("Is there anyone touched me???")
 		end
 		return
 	end
 	local talk = traveller.components.talker
 
-	if not info.inst or not info.inst:IsValid() then
+	if not info or not info.inst or not info.inst:IsValid() then
 		if comment then
 			comment:Say("The destination is no longer reachable.")
 		elseif talk then
@@ -134,7 +144,7 @@ function Travelable:DoTravel(traveller, info)
 			end
 		end
 
-		local container = inventory.overflow and inventory.overflow.components.container or nil
+		local container = inventory.overflow and inventory.overflow.components.container
 		if container then
 			for kb, vb in pairs(container.slots) do
 				if vb.components.leader and vb.components.leader.followers then
@@ -150,19 +160,21 @@ function Travelable:DoTravel(traveller, info)
 		end
 	else
 		if talk then
-			talk:Say("I won't make it.")
+			talk:Say("It's too far.")
 		elseif comment then
-			comment:Say("You won't make it.")
+			comment:Say("It's too far.")
 		end
 	end
 end
 
 function Travelable:IsNearDanger(traveller)
-	local hounded = GetWorld().components.hounded
-	if hounded and (hounded.warning or hounded.timetoattack <= 0) then
+	if not traveller then
+		print("traveller is nil\n", debug.traceback())
 		return true
 	end
-	if not traveller then
+
+	local hounded = GetWorld().components.hounded
+	if hounded and (hounded.warning or hounded.timetoattack <= 0) then
 		return true
 	end
 	local burnable = traveller.components.burnable
@@ -174,7 +186,7 @@ function Travelable:IsNearDanger(traveller)
 			traveller,
 			10,
 			function(target)
-				return (target.components.combat and target.components.combat.target == traveller) or (not (target:HasTag("player") or target:HasTag("spider")) and (target:HasTag("monster") or target:HasTag("pig")))
+				return (target.components.combat and target.components.combat.target == traveller) or (target:HasTag("monster") and not target:HasTag("spider")) or target:HasTag("pig")
 			end,
 			nil,
 			nil,
@@ -185,12 +197,18 @@ function Travelable:IsNearDanger(traveller)
 		traveller,
 		10,
 		function(target)
-			return (target.components.combat and target.components.combat.target == traveller) or (target:HasTag("monster") and not target:HasTag("player"))
+			return (target.components.combat and target.components.combat.target == traveller) or target:HasTag("monster")
 		end,
 		nil,
 		nil,
 		{"monster", "_combat"}
 	)
+end
+
+function Travelable:Reload()
+	package.loaded["screens/travelscreen"] = nil
+	TravelScreen = require "screens/travelscreen"
+	print("TravelScreen Reloaded")
 end
 
 return Travelable
