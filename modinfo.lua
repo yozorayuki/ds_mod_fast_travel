@@ -1,6 +1,6 @@
 name = "Fast Travel"
-version = "2.01"
-description = "Build a fast travel network and travel instantly from sign post to sign post."
+version = "2.02"
+description = "version " .. version .. "\nBuild a fast travel network and travel instantly from sign post to sign post."
 author = "SoraYuki"
 forumthread = ""
 
