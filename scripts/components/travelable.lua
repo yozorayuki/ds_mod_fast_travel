@@ -158,6 +158,12 @@ function Travelable:DoTravel(traveller, info)
 				end
 			end
 		end
+
+		local text = self.inst.components.signable and self.inst.components.signable:GetText()
+		if not text or text == "" then
+			self.inst:Remove()
+			SpawnPrefab("boards").Transform:SetPosition(info.x, info.y, info.z)
+		end
 	else
 		if talk then
 			talk:Say("It's too far.")
