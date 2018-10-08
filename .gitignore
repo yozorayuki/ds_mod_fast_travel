@@ -40,3 +40,4 @@ luac.out
 *.hex
 
 update.txt
+\#debug_cmdline.lua
