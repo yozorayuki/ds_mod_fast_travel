@@ -70,7 +70,9 @@ function Travelable:MakeInfos()
 			info.cost_sanity = math.ceil(info.cost_sanity * 1.5)
 		end
 
-		table.insert(dest_infos, info)
+		if not v.ininterior then
+			table.insert(dest_infos, info)
+		end
 	end
 
 	table.sort(
@@ -98,6 +100,15 @@ function Travelable:DoTravel(traveller, info)
 		return
 	end
 	local talk = traveller.components.talker
+
+	if self.inst.ininterior then
+		if comment then
+			comment:Say("NO TRAVELLING HERE.")
+		elseif talk then
+			talk:Say("It seems to be broken.")
+		end
+		return
+	end
 
 	if not info or not info.inst or not info.inst:IsValid() then
 		if comment then

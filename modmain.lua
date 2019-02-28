@@ -12,7 +12,7 @@ local Action = GLOBAL.Action
 local ActionHandler = GLOBAL.ActionHandler
 local SpawnPrefab = GLOBAL.SpawnPrefab
 
-local EDIT = Action({}, 10, false)
+local EDIT = Action({}, 9, false, true)
 EDIT.str = "Edit"
 EDIT.id = "EDIT"
 EDIT.fn = function(act)
@@ -24,7 +24,7 @@ EDIT.fn = function(act)
 	end
 end
 AddAction(EDIT)
-AddStategraphActionHandler("wilson", ActionHandler(EDIT, nil))
+AddStategraphActionHandler("wilson", ActionHandler(EDIT, "give"))
 
 local SIGN_REPAIR = Action({}, 10, false)
 SIGN_REPAIR.str = "Repair"
